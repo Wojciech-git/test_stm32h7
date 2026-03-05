@@ -8,6 +8,7 @@ CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
+GDB = $(PREFIX)gdb
 
 OPENOCD ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink.cfg
@@ -73,4 +74,15 @@ flash: $(BUILD_DIR)/$(TARGET).elf
 		-c "adapter speed $(OPENOCD_SPEED)" \
 		-c "program $(BUILD_DIR)/$(TARGET).elf verify reset exit"
 
-.PHONY: all clean flash
+openocd:
+	$(OPENOCD) -f $(OPENOCD_INTERFACE) \
+		$(if $(OPENOCD_TRANSPORT),-c "transport select $(OPENOCD_TRANSPORT)") \
+		-f $(OPENOCD_TARGET) \
+		-c "adapter speed $(OPENOCD_SPEED)"
+
+gdb: $(BUILD_DIR)/$(TARGET).elf
+	$(GDB) $(BUILD_DIR)/$(TARGET).elf \
+		-ex "target extended-remote :3333" \
+		-ex "monitor reset halt"
+
+.PHONY: all clean flash openocd gdb
