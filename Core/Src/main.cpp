@@ -27,7 +27,7 @@ static void led_init(void)
   GPIOB->PUPDR &= ~(3U << (0U * 2U));
 }
 
-#define BLINK_PERIOD 1000  //ms
+#define BLINK_PERIOD 100  //ms
 
 int main(void)
 {

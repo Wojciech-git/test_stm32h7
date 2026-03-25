@@ -5,6 +5,7 @@ DEVICE = STM32H753xx
 
 PREFIX = /opt/st/stm32cubeclt_1.20.0/GNU-tools-for-STM32/bin/arm-none-eabi-
 CC = $(PREFIX)gcc
+CXX = $(PREFIX)g++
 AS = $(PREFIX)gcc
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
@@ -19,8 +20,9 @@ OPENOCD_TRANSPORT ?= hla_swd
 SRC_DIR = Core/Src
 INC_DIR = Core/Inc
 
-SOURCES = $(SRC_DIR)/main.c \
-          $(SRC_DIR)/system_stm32h7xx.c
+C_SOURCES = $(SRC_DIR)/system_stm32h7xx.c
+
+CXX_SOURCES = $(SRC_DIR)/main.cpp
 
 ASM_SOURCES = Core/Startup/startup_stm32h753xx.s
 
@@ -34,6 +36,10 @@ CPU = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 
 CFLAGS = $(CPU) -O0 -ggdb -Wall -fdata-sections -ffunction-sections
 CFLAGS += $(INCLUDES) -std=gnu99 -fno-common -DSTM32H753xx
+
+CXXFLAGS = $(CPU) -O0 -ggdb -Wall -fdata-sections -ffunction-sections
+CXXFLAGS += $(INCLUDES) -std=gnu++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-common -DSTM32H753xx
+
 ASFLAGS = $(CPU) -x assembler-with-cpp
 
 LDSCRIPT = STM32H753ZITx_FLASH.ld
@@ -41,14 +47,19 @@ LDFLAGS = $(CPU) -T $(LDSCRIPT) -specs=nosys.specs -lc -lm
 LDFLAGS += -Wl,--gc-sections -Wl,-Map=$(TARGET).map,--cref -Wl,--print-memory-usage
 
 BUILD_DIR = build
-OBJ = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
+OBJ = $(C_SOURCES:%.c=$(BUILD_DIR)/%.o)
+OBJ += $(CXX_SOURCES:%.cpp=$(BUILD_DIR)/%.o)
 OBJ += $(ASM_SOURCES:%.s=$(BUILD_DIR)/%.o)
 
 all: $(BUILD_DIR)/$(TARGET).elf $(TARGET).bin $(TARGET).hex
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJ)
-	$(CC) $(OBJ) $(LDFLAGS) -o $@
+	$(CXX) $(OBJ) $(LDFLAGS) -o $@
 	$(SZ) $@
+
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
