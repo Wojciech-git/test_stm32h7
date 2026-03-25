@@ -1,11 +1,19 @@
 #include "main.h"
 
-static void delay_cycles(volatile uint32_t cycles)
+static void delay_ms(uint32_t ms)
 {
-  while (cycles--)
+  SysTick->LOAD = (SystemCoreClock / 1000U) - 1U;
+  SysTick->VAL = 0U;
+  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+
+  while (ms--)
   {
-    __NOP();
+    while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U)
+    {
+    }
   }
+
+  SysTick->CTRL = 0U;
 }
 
 static void led_init(void)
@@ -19,6 +27,8 @@ static void led_init(void)
   GPIOB->PUPDR &= ~(3U << (0U * 2U));
 }
 
+#define BLINK_PERIOD 1000  //ms
+
 int main(void)
 {
   SystemCoreClockUpdate();
@@ -27,9 +37,9 @@ int main(void)
   while (1)
   {
     GPIOB->BSRR = GPIO_BSRR_BS0;
-    delay_cycles(SystemCoreClock / 8U);
+    delay_ms(BLINK_PERIOD/2);
 
     GPIOB->BSRR = GPIO_BSRR_BR0;
-    delay_cycles(SystemCoreClock / 8U);
+    delay_ms(BLINK_PERIOD/2);
   }
 }

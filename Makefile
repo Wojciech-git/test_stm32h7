@@ -8,12 +8,12 @@ CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
-GDB = $(PREFIX)gdb
+GDB = /home/wb/bin/xpack-arm-none-eabi-gcc-15.2.1-1.1/bin/arm-none-eabi-gdb
 
 OPENOCD ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink.cfg
 OPENOCD_TARGET ?= target/stm32h7x.cfg
-OPENOCD_SPEED ?= 1000
+OPENOCD_SPEED ?= 4000
 OPENOCD_TRANSPORT ?= hla_swd
 
 SRC_DIR = Core/Src
@@ -84,5 +84,8 @@ gdb: $(BUILD_DIR)/$(TARGET).elf
 	$(GDB) $(BUILD_DIR)/$(TARGET).elf \
 		-ex "target extended-remote :3333" \
 		-ex "monitor reset halt"
+
+compile_commands.json:
+	bear --output $@ -- $(MAKE) --no-print-directory clean all
 
 .PHONY: all clean flash openocd gdb
