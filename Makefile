@@ -20,7 +20,17 @@ OPENOCD_TRANSPORT ?= hla_swd
 SRC_DIR = Core/Src
 INC_DIR = Core/Inc
 
-C_SOURCES = $(SRC_DIR)/system_stm32h7xx.c
+FREERTOS_DIR = $(CUBE_H7)/Middlewares/Third_Party/FreeRTOS/Source
+
+C_SOURCES = $(SRC_DIR)/system_stm32h7xx.c \
+$(FREERTOS_DIR)/tasks.c \
+$(FREERTOS_DIR)/queue.c \
+$(FREERTOS_DIR)/list.c \
+$(FREERTOS_DIR)/timers.c \
+$(FREERTOS_DIR)/event_groups.c \
+$(FREERTOS_DIR)/stream_buffer.c \
+$(FREERTOS_DIR)/portable/MemMang/heap_4.c \
+$(FREERTOS_DIR)/portable/GCC/ARM_CM7/r0p1/port.c
 
 CXX_SOURCES = $(SRC_DIR)/main.cpp
 
@@ -31,6 +41,8 @@ CUBE_H7 = /home/wb/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1
 INCLUDES = -I$(INC_DIR)
 INCLUDES += -I$(CUBE_H7)/Drivers/CMSIS/Include
 INCLUDES += -I$(CUBE_H7)/Drivers/CMSIS/Device/ST/STM32H7xx/Include
+INCLUDES += -I$(FREERTOS_DIR)/include
+INCLUDES += -I$(FREERTOS_DIR)/portable/GCC/ARM_CM7/r0p1
 
 CPU = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 

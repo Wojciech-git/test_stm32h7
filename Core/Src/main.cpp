@@ -1,20 +1,6 @@
 #include "main.h"
-
-static void delay_ms(uint32_t ms)
-{
-  SysTick->LOAD = (SystemCoreClock / 1000U) - 1U;
-  SysTick->VAL = 0U;
-  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
-
-  while (ms--)
-  {
-    while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U)
-    {
-    }
-  }
-
-  SysTick->CTRL = 0U;
-}
+#include "FreeRTOS.h"
+#include "task.h"
 
 static void led_init(void)
 {
@@ -27,19 +13,30 @@ static void led_init(void)
   GPIOB->PUPDR &= ~(3U << (0U * 2U));
 }
 
-#define BLINK_PERIOD 100  //ms
+#define BLINK_PERIOD 1000  //ms
+
+void led_task(void *pvParameters)
+{
+  while (1)
+  {
+    GPIOB->BSRR = GPIO_BSRR_BS0;
+    vTaskDelay(pdMS_TO_TICKS(BLINK_PERIOD/2));
+
+    GPIOB->BSRR = GPIO_BSRR_BR0;
+    vTaskDelay(pdMS_TO_TICKS(BLINK_PERIOD/2));
+  }
+}
 
 int main(void)
 {
   SystemCoreClockUpdate();
   led_init();
 
+  xTaskCreate(led_task, "LED_Task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+
+  vTaskStartScheduler();
+
   while (1)
   {
-    GPIOB->BSRR = GPIO_BSRR_BS0;
-    delay_ms(BLINK_PERIOD/2);
-
-    GPIOB->BSRR = GPIO_BSRR_BR0;
-    delay_ms(BLINK_PERIOD/2);
   }
 }
