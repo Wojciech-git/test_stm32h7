@@ -1,6 +1,5 @@
 import os
 import subprocess
-import re
 
 def run_tests(branch_name):
     print(f"\n--- Tests for {branch_name} ---")
@@ -8,17 +7,21 @@ def run_tests(branch_name):
     print("-" * 55)
     
     for opt in ['-O0', '-Os', '-O2', '-O3']:
-        with open('Makefile', 'r') as f:
-            content = f.read()
-            
-        # Replace existing -O flag with the current target optimization flag
-        content = re.sub(r'-O[0s23]', opt, content)
         
-        with open('Makefile', 'w') as f:
-            f.write(content)
+        # Clean build directory completely to ensure fresh configure
+        subprocess.run(['rm', '-rf', 'build'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        # Configure with specific optimization level
+        configure_cmd = ['cmake', '--preset', 'default', f'-DOPT_LEVEL={opt}']
+        subprocess.run(configure_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
-        # Clean and Build
-        subprocess.run(['make', 'clean', 'all'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Build
+        build_cmd = ['cmake', '--build', '--preset', 'default']
+        build_result = subprocess.run(build_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        if build_result.returncode != 0:
+            print(f"{opt:<5} | Build failed")
+            continue
         
         # Get memory footprint using size utility
         result = subprocess.run(
@@ -37,17 +40,16 @@ def run_tests(branch_name):
         else:
             print(f"{opt:<5} | Build failed or no size output")
 
-# Ensure clean state for Makefile before starting
-subprocess.run(['git', 'checkout', 'Makefile'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# Ensure clean state before starting
+subprocess.run(['rm', '-rf', 'build'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# C++ tests (master)
+# FreeRTOS tests (master)
 subprocess.run(['git', 'checkout', 'master'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-run_tests("C++ Version (Current Commit)")
+run_tests("FreeRTOS Version (Current Commit)")
 
-# C tests (HEAD~1)
+# Bare-Metal C++ tests (HEAD~1)
 subprocess.run(['git', 'checkout', 'HEAD~1'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-run_tests("C Version (Previous Commit)")
+run_tests("Bare-Metal C++ Version (Previous Commit)")
 
 # Restore original state
 subprocess.run(['git', 'checkout', 'master'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-subprocess.run(['git', 'checkout', 'Makefile'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
