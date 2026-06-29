@@ -3,3 +3,4 @@ build/
 *.bin
 *.hex
 *.map
+compile_commands.json

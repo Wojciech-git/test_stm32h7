@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "dbg: stm32l5",
+      "type": "dbg_wrapper",
+      "request": "attach",
+      "program": "${workspaceFolder}/build/stm32h7.elf",
+      "target": "localhost:3333",
+      "cwd": "${workspaceFolder}",
+      "exceptionBreakpoints": []
+    },
+    {
+      "name": "gdbmultiarch: stm32l5",
+      "type": "gdbmultiarch",
+      "request": "attach",
+      "program": "${workspaceFolder}/build/stm32h7.elf",
+      "target": "localhost:3333",
+      "cwd": "${workspaceFolder}",
+      "exceptionBreakpoints": []
+    }
+  ]
+}

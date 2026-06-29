@@ -11,9 +11,9 @@ CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
 GDB = /home/wb/bin/xpack-arm-none-eabi-gcc-15.2.1-1.1/bin/arm-none-eabi-gdb
 
-OPENOCD ?= openocd
+OPENOCD ?= /home/wb/bin/xpack-openocd-0.12.0-2/bin/openocd
 OPENOCD_INTERFACE ?= interface/stlink.cfg
-OPENOCD_TARGET ?= target/stm32h7x.cfg
+OPENOCD_TARGET ?= $(CURDIR)/openocd.cfg
 OPENOCD_SPEED ?= 4000
 OPENOCD_TRANSPORT ?= hla_swd
 
@@ -46,24 +46,36 @@ INCLUDES += -I$(FREERTOS_DIR)/portable/GCC/ARM_CM7/r0p1
 
 CPU = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 
-CFLAGS = $(CPU) -O0 -ggdb -Wall -fdata-sections -ffunction-sections
+DEBUG=1
+
+ifneq ($(DEBUG),)
+OPT   = -O0
+DBG   = -ggdb
+LTO   =
+else
+OPT   = -Os
+DBG   =
+LTO   = -flto
+endif
+
+CFLAGS = $(CPU) $(OPT) $(DBG) -Wall -fdata-sections -ffunction-sections
 CFLAGS += $(INCLUDES) -std=gnu99 -fno-common -DSTM32H753xx
 
-CXXFLAGS = $(CPU) -O0 -ggdb -Wall -fdata-sections -ffunction-sections
+CXXFLAGS = $(CPU) $(OPT) $(DBG) -Wall -fdata-sections -ffunction-sections
 CXXFLAGS += $(INCLUDES) -std=gnu++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-common -DSTM32H753xx
 
 ASFLAGS = $(CPU) -x assembler-with-cpp
 
 LDSCRIPT = STM32H753ZITx_FLASH.ld
 LDFLAGS = $(CPU) -T $(LDSCRIPT) -specs=nosys.specs -lc -lm
-LDFLAGS += -Wl,--gc-sections -Wl,-Map=$(TARGET).map,--cref -Wl,--print-memory-usage
+LDFLAGS += -Wl,--gc-sections -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--print-memory-usage $(LTO)
 
 BUILD_DIR = build
 OBJ = $(C_SOURCES:%.c=$(BUILD_DIR)/%.o)
 OBJ += $(CXX_SOURCES:%.cpp=$(BUILD_DIR)/%.o)
 OBJ += $(ASM_SOURCES:%.s=$(BUILD_DIR)/%.o)
 
-all: $(BUILD_DIR)/$(TARGET).elf $(TARGET).bin $(TARGET).hex
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin $(BUILD_DIR)/$(TARGET).hex
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJ)
 	$(CXX) $(OBJ) $(LDFLAGS) -o $@
@@ -81,25 +93,23 @@ $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -c $< -o $@
 
-$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
+$(BUILD_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
 	$(CP) -O binary $< $@
 
-$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
+$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
 	$(CP) -O ihex $< $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET).bin $(TARGET).hex $(TARGET).map
+	rm -rf $(BUILD_DIR)
 
 flash: $(BUILD_DIR)/$(TARGET).elf
 	$(OPENOCD) -f $(OPENOCD_INTERFACE) \
-		$(if $(OPENOCD_TRANSPORT),-c "transport select $(OPENOCD_TRANSPORT)") \
 		-f $(OPENOCD_TARGET) \
 		-c "adapter speed $(OPENOCD_SPEED)" \
 		-c "program $(BUILD_DIR)/$(TARGET).elf verify reset exit"
 
 openocd:
 	$(OPENOCD) -f $(OPENOCD_INTERFACE) \
-		$(if $(OPENOCD_TRANSPORT),-c "transport select $(OPENOCD_TRANSPORT)") \
 		-f $(OPENOCD_TARGET) \
 		-c "adapter speed $(OPENOCD_SPEED)"
 
@@ -111,4 +121,6 @@ gdb: $(BUILD_DIR)/$(TARGET).elf
 compile_commands.json:
 	bear --output $@ -- $(MAKE) --no-print-directory clean all
 
-.PHONY: all clean flash openocd gdb
+update: compile_commands.json
+
+.PHONY: all clean flash openocd gdb update
